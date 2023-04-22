@@ -1,0 +1,48 @@
+### data processing of library constructed by DNA SMART Kit###
+
+#gunzip all. gz files in a directory
+gunzip *.fastq.gz
+
+#alias samtools="/usr/local/bin/bin/samtools"
+
+### BWA alignment ###
+### remove PCR duplicates ###
+
+sample=Gam-2h-1_S5
+ref=NC_000913.3.fa
+bwa index ${ref}
+
+### The first three bases of the first sequencing read (Read 1) are derived from the template switching oligo. These three bases need to  be trimmed prior to mapping. ####
+### Trim 15nt of Read2 sequence in case of regular Illumina read2 primer ###
+
+#java -jar /home/jingjing/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE ${sample}_S10_L001_R2_001.fastq ${sample}_R2.trim.fastq HEADCROP:15
+#chmod +x script.sh
+#./script.sh
+
+./read1_trimming.sh
+
+#python read2_trimming.py
+
+./alignment.sh
+
+##use MACS2 to call peak with nomodel mode###
+
+sample=829_S3
+outfile=greB29t0730c
+
+macs2 callpeak -t ${sample}_aln.rmdup.fwd.sort.bam -c 777chip-1_S2_aln.rmdup.fwd.sort.bam --nomodel -f BAMPE -g 4.6e6 -n ${outfile}.fwd -B -q 0.00001 
+macs2 callpeak -t ${sample}_aln.rmdup.rev.sort.bam -c 777chip-1_S2_aln.rmdup.rev.sort.bam --nomodel -f BAMPE -g 4.6e6 -n ${outfile}.rev -B -q 0.00001
+
+mono MSPC.exe -i 776rep1.bed -i 776rep2.bed -r biological -s 1E-8 -w 1E-4
+
+./strandness.sh
+
+
+### ChIP-seq ana ####
+
+multiBamSummary bins --bamfiles 0730_776chip-2_S7_aln.rmdup.bam 0225_776-4h-1_S9_aln.rmdup.bam 0730_777chip-1_S2_aln.rmdup.bam -bs 1000 -o results.npz
+
+plotCorrelation --corData results.npz --corMethod pearson --whatToPlot heatmap -o ExIDsponChIP.pdf --colorMap Blues --zMin 0.5 --zMax 1 --plotNumbers
+
+
+
